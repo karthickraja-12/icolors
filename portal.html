@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Prevent search engine indexation of private file listing -->
+  <meta name="robots" content="noindex, nofollow">
+  
+  <title>iColors | Document Portal</title>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css?v=1.0.2">
+</head>
+<body>
+
+  <!-- Background Glowing Elements -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Setup Banner (managed by app.js) -->
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="container">
+      <div class="logo-container" onclick="window.location.href='index.html'">
+        <img src="logo.jpeg" alt="iColors Logo" class="logo-img">
+      </div>
+      <div class="nav-actions">
+        <!-- User Welcome Text -->
+        <span id="user-greeting" style="font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); display: none;">Welcome, Guest</span>
+        <button id="logout-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem; display: none;">Logout</button>
+        
+        <!-- Theme Toggle -->
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+          <svg class="moon-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg class="sun-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Access Denied State (default shown during validation) -->
+  <main id="portal-denied" class="container" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 180px); padding-top: 4rem;">
+    <div class="glass-card" style="max-width: 500px; text-align: center; width: 100%;">
+      <div style="background: rgba(239, 68, 68, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--danger);">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width: 32px; height: 32px;">
+          <path fill-rule="evenodd" d="M13.477 3.03a.75.75 0 01.137 1.053L11.5 7.25h5.75a.75.75 0 01.53 1.28l-8 8a.75.75 0 01-1.19-.884L10.5 12.75H4.75a.75.75 0 01-.53-1.28l8-8a.75.75 0 011.057-.14z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+      <h2 style="font-size: 2rem; margin-bottom: 0.75rem;">Access Restrained</h2>
+      <p id="denied-message" style="color: var(--text-secondary); margin-bottom: 2rem;">A valid access token is required to view these resources. If you have registered, check your email inbox for the access link.</p>
+      <a href="index.html" class="btn btn-primary" style="padding: 0.8rem 1.8rem;">Go to Registration</a>
+    </div>
+  </main>
+
+  <!-- Document Portal Loading State -->
+  <div id="portal-loading" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-primary); z-index: 99; align-items: center; justify-content: center; flex-direction: column;">
+    <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" style="width: 48px; height: 48px; animation: spin 1s linear infinite; margin-bottom: 1rem;">
+      <circle cx="12" cy="12" r="10" stroke="var(--border-color)"></circle>
+      <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+    </svg>
+    <p style="color: var(--text-secondary); font-weight: 500;">Validating Security Token...</p>
+  </div>
+
+  <!-- Document Portal Main Dashboard (Hidden until authorized) -->
+  <main id="portal-content" class="container" style="display: none;">
+    <!-- Portal Welcome Header -->
+    <div class="portal-header">
+      <div class="portal-title">
+        <h1 id="welcome-title">Exclusive Resources</h1>
+        <p>You have access to the following documents, media directories, and assets.</p>
+      </div>
+    </div>
+
+    <!-- Controls Row (Search and Category Filter) -->
+    <section class="controls-row">
+      <div class="search-wrapper">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input type="text" id="search-bar" class="search-input" placeholder="Search by document name or description...">
+      </div>
+
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-type="all">All</button>
+        <button class="filter-tab" data-type="PDF">PDFs</button>
+        <button class="filter-tab" data-type="Spreadsheet">Spreadsheets</button>
+        <button class="filter-tab" data-type="Presentation">Slides</button>
+        <button class="filter-tab" data-type="Folder">Folders</button>
+      </div>
+    </section>
+
+    <!-- Document Grid -->
+    <section class="document-grid" id="document-grid">
+      <!-- Cards rendered dynamically by portal.js -->
+    </section>
+  </main>
+
+  <footer id="portal-footer" style="display: none; padding: 2rem 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-muted); position: relative; z-index: 2; margin-top: auto;">
+    <div class="container">
+      <p>&copy; 2026 iColors. All rights reserved. Secure access portal with document tracking.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script src="portal.js"></script>
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>

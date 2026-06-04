@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  
+  <title>iColors | Admin Dashboard</title>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css?v=1.0.2">
+</head>
+<body>
+
+  <!-- Background Glowing Elements -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Setup Banner (managed by app.js) -->
+
+  <!-- Header / Nav for Dashboard -->
+  <header class="navbar">
+    <div class="container">
+      <div class="logo-container" onclick="window.location.reload()">
+        <img src="logo.jpeg" alt="iColors Logo" class="logo-img">
+        <span style="font-size: 0.95rem; font-weight: 600; opacity: 0.8; margin-left: 0.5rem; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Admin</span>
+      </div>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Landing Page</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+          <svg class="moon-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg class="sun-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Section (Unauthenticated state) -->
+  <main id="admin-login-section" class="admin-login-wrapper">
+    <div class="glass-card login-card">
+      <div class="login-header">
+        <h2>Dashboard Portal</h2>
+        <p>Enter your authorization passcode to manage leads, files, and review interaction logs.</p>
+      </div>
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label for="passcode" class="form-label">Admin Passcode *</label>
+          <input type="password" id="passcode" class="form-input" placeholder="e.g. admin123" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.9rem;">
+          <span>Authenticate</span>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Dashboard Section (Authenticated state) -->
+  <main id="admin-dashboard-section" class="admin-layout" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-link active" data-target="sec-analytics">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span>Analytics</span>
+      </div>
+      <div class="sidebar-link" data-target="sec-leads">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        <span>Leads</span>
+      </div>
+      <div class="sidebar-link" data-target="sec-documents">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <span>Documents</span>
+      </div>
+      <div class="sidebar-link" data-target="sec-logs">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Access Logs</span>
+      </div>
+      
+      <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <div class="sidebar-link" id="admin-logout-btn" style="color: var(--danger);">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          <span>Log Out</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <section class="admin-content">
+      
+      <!-- SECTION: ANALYTICS -->
+      <div id="sec-analytics" class="dashboard-section active">
+        <h2 style="margin-bottom: 2rem;">Overview & Analytics</h2>
+        
+        <!-- Metrics Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>Total Leads</span>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <div>
+              <div class="stat-value" id="stat-total-leads">-</div>
+              <div class="stat-trend up">
+                <svg fill="currentColor" viewBox="0 0 20 20" style="width: 14px; height: 14px;"><path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L9 10.586 12.586 7H12z" clip-rule="evenodd"></path></svg>
+                <span>Growth active</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>Leads Today</span>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </div>
+            <div>
+              <div class="stat-value" id="stat-today-leads">-</div>
+              <div class="stat-trend" style="color: var(--text-muted);">
+                <span>Current day's capture</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>Leads This Week</span>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+              <div class="stat-value" id="stat-weekly-leads">-</div>
+              <div class="stat-trend" style="color: var(--text-muted);">
+                <span>Last 7 days total</span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span>Leads This Month</span>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1m-4-6h12m-5-7L8 18H5l12-14h3"></path></svg>
+            </div>
+            <div>
+              <div class="stat-value" id="stat-monthly-leads">-</div>
+              <div class="stat-trend" style="color: var(--text-muted);">
+                <span>Last 30 days total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="analytics-grid">
+          <!-- Top Documents Accessed -->
+          <div class="table-card" style="padding: 1.5rem; margin-bottom: 0;">
+            <h3 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Top Accessed Resources</h3>
+            <div class="top-docs-list" id="analytics-top-docs">
+              <!-- Rendered Dynamically -->
+            </div>
+          </div>
+          
+          <!-- Conversion Ratios -->
+          <div class="table-card" style="padding: 1.5rem; margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="margin-bottom: 0.5rem; font-size: 1.25rem;">Conversion Rate</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Ratio of registered leads who active accessed at least one file portal document.</p>
+            </div>
+            
+            <div style="text-align: center; padding: 1.5rem 0;">
+              <div style="font-size: 4rem; font-weight: 800; font-family: var(--font-heading); color: var(--accent-light); line-height: 1;" id="analytics-conversion-rate">0%</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-top: 0.5rem;" id="analytics-conversion-fraction">0 out of 0 Leads</div>
+            </div>
+            
+            <div class="progress-bar-bg" style="height: 8px;">
+              <div class="progress-bar" id="analytics-conversion-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: LEADS -->
+      <div id="sec-leads" class="dashboard-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+          <h2>Lead Management</h2>
+          <button id="leads-export-btn" class="btn btn-secondary">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <span>Export CSV</span>
+          </button>
+        </div>
+
+        <div class="table-card">
+          <!-- Filters Toolbar -->
+          <div class="table-header-row">
+            <div class="search-wrapper">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input type="text" id="leads-search" class="search-input" placeholder="Search by name, email, company...">
+            </div>
+            <div style="display: flex; gap: 1rem;">
+              <select id="leads-filter-device" class="form-input" style="padding: 0.5rem 1.5rem; width: auto; background-color: var(--bg-primary);">
+                <option value="all">All Devices</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Mobile">Mobile</option>
+                <option value="Tablet">Tablet</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table Content -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Company</th>
+                  <th>Device</th>
+                  <th>Token</th>
+                </tr>
+              </thead>
+              <tbody id="leads-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination">
+            <span id="leads-pagination-info">Showing 0-0 of 0 leads</span>
+            <div class="pagination-actions">
+              <button class="btn btn-secondary" id="leads-prev-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Prev</button>
+              <button class="btn btn-secondary" id="leads-next-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: DOCUMENTS -->
+      <div id="sec-documents" class="dashboard-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+          <h2>Document Management</h2>
+          <button id="add-doc-modal-btn" class="btn btn-primary">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Add New Document</span>
+          </button>
+        </div>
+
+        <div class="table-card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>File Type</th>
+                  <th>Date Added</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="docs-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: ACCESS LOGS -->
+      <div id="sec-logs" class="dashboard-section">
+        <h2 style="margin-bottom: 2rem;">Access Logs</h2>
+
+        <div class="table-card">
+          <!-- Filters Toolbar -->
+          <div class="table-header-row">
+            <div class="search-wrapper">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input type="text" id="logs-search" class="search-input" placeholder="Search by lead name, file name, token...">
+            </div>
+            <div>
+              <select id="logs-filter-action" class="form-input" style="padding: 0.5rem 1.5rem; width: auto; background-color: var(--bg-primary);">
+                <option value="all">All Actions</option>
+                <option value="Opened Portal">Opened Portal</option>
+                <option value="Viewed File">Viewed File</option>
+                <option value="Downloaded File">Downloaded File</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table Content -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Lead Name</th>
+                  <th>Token</th>
+                  <th>Document Name</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="logs-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination">
+            <span id="logs-pagination-info">Showing 0-0 of 0 logs</span>
+            <div class="pagination-actions">
+              <button class="btn btn-secondary" id="logs-prev-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Prev</button>
+              <button class="btn btn-secondary" id="logs-next-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </section>
+  </main>
+
+  <!-- MODAL: ADD / EDIT DOCUMENT -->
+  <div class="modal-overlay" id="doc-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Document</h3>
+        <button class="modal-close" id="doc-modal-close">&times;</button>
+      </div>
+      <form id="doc-form">
+        <input type="hidden" id="edit-doc-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="doc-title" class="form-label">Document Title *</label>
+            <input type="text" id="doc-title" class="form-input" placeholder="e.g. Slide Deck Q2 Strategy" required>
+          </div>
+          <div class="form-group">
+            <label for="doc-desc" class="form-label">Description *</label>
+            <textarea id="doc-desc" class="form-input" rows="3" placeholder="Explain what is in this file..." style="resize: vertical; font-family: inherit;" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="doc-url" class="form-label">Secure File / Folder Link (Google Drive) *</label>
+            <input type="url" id="doc-url" class="form-input" placeholder="e.g. https://drive.google.com/..." required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label for="doc-type" class="form-label">Resource Type *</label>
+              <select id="doc-type" class="form-input" required>
+                <option value="PDF">PDF Document</option>
+                <option value="Spreadsheet">Spreadsheet</option>
+                <option value="Presentation">Slide Presentation</option>
+                <option value="Folder">Folder Directory</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="doc-status" class="form-label">Status *</label>
+              <select id="doc-status" class="form-input" required>
+                <option value="Active">Active / Visible</option>
+                <option value="Inactive">Inactive / Hidden</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="doc-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="doc-modal-submit-btn">Save Document</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

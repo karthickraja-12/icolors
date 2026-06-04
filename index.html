@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Access premium business assets, guidelines, templates, and folders securely. Enter your details to get instant access.">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="iColors - Professional Document Access Portal">
+  <meta property="og:description" content="Access premium resources instantly. Enter your lead details to get secure, branded access.">
+  <meta property="og:type" content="website">
+  
+  <title>iColors | Secure Document Portal</title>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css?v=1.0.2">
+</head>
+<body>
+
+  <!-- Background Glowing Elements -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="container">
+      <div class="logo-container" onclick="window.location.reload()">
+        <img src="logo.jpeg" alt="iColors Logo" class="logo-img">
+      </div>
+      <div class="nav-actions">
+        <a href="admin.html" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Admin Panel</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+          <svg class="moon-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg class="sun-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Hero and Lead Form Layout -->
+  <main class="container">
+    <section class="hero-layout">
+      <!-- Info Column -->
+      <div class="hero-info">
+        <h1>Access Our Exclusive Resources</h1>
+        <p>Please enter your information in the portal form to receive secure, authenticated access to our corporate templates, brand files, slide decks, and forecasting spreadsheets.</p>
+        
+        <!-- Trust Badge Grid -->
+        <div class="trust-badges">
+          <div class="trust-badge">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M2.166 4.9L10 1.954 17.834 4.9A1 1 0 0118.5 5.854v4.526a8.21 8.21 0 01-4.707 7.407L10 19.046l-3.793-1.26a8.21 8.21 0 01-4.707-7.406V5.854a1 1 0 01.666-.954zM10 5a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1zm0 7a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="trust-badge-text">
+              <h4>Secure Access</h4>
+              <p>Tokens are encrypted and unique to you.</p>
+            </div>
+          </div>
+          <div class="trust-badge">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="trust-badge-text">
+              <h4>Privacy Protected</h4>
+              <p>We never share your contact details.</p>
+            </div>
+          </div>
+          <div class="trust-badge">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="trust-badge-text">
+              <h4>Instant Access</h4>
+              <p>Get redirected immediately on submit.</p>
+            </div>
+          </div>
+          <div class="trust-badge">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3.005 3.005 0 013.75-2.906z"></path>
+            </svg>
+            <div class="trust-badge-text">
+              <h4>Trusted Service</h4>
+              <p>Used by hundreds of premium clients.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Column -->
+      <div class="hero-form">
+        <div class="glass-card">
+          <h2 style="font-size: 1.75rem; margin-bottom: 0.5rem;">Register for Access</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem;">Please fill out the form. You will also receive an email with your permanent access token.</p>
+          
+          <form id="lead-form" novalidate>
+            <!-- Full Name -->
+            <div class="form-group" id="group-name">
+              <label for="name" class="form-label">Full Name *</label>
+              <input type="text" id="name" class="form-input" placeholder="e.g. John Doe" required>
+              <span class="error-text">Full name must be at least 3 characters.</span>
+            </div>
+
+            <!-- Email Address -->
+            <div class="form-group" id="group-email">
+              <label for="email" class="form-label">Email Address *</label>
+              <input type="email" id="email" class="form-input" placeholder="e.g. john@company.com" required>
+              <span class="error-text">Please enter a valid business email address.</span>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="form-group" id="group-phone">
+              <label for="phone" class="form-label">Phone Number (with Country Code) *</label>
+              <input type="tel" id="phone" class="form-input" placeholder="e.g. +1 555-0199 or +91 9876543210" required>
+              <span class="error-text">Please include your country code (e.g. +1 or +91) and a valid number.</span>
+            </div>
+
+            <!-- Company Name -->
+            <div class="form-group" id="group-company">
+              <label for="company" class="form-label">Company Name (Optional)</label>
+              <input type="text" id="company" class="form-input" placeholder="e.g. Acme Corporation">
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.9rem;">
+              <span>Access Documents</span>
+              <svg id="loading-spinner" class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 18px; height: 18px; display: none; animation: spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)"></circle>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="margin-top: 6rem; padding: 2rem 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-muted); position: relative; z-index: 2;">
+    <div class="container">
+      <p>&copy; 2026 iColors. All rights reserved. Secure access portal with document tracking.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("lead-form");
+      const submitBtn = document.getElementById("submit-btn");
+      const loadingSpinner = document.getElementById("loading-spinner");
+      const submitText = submitBtn.querySelector("span");
+
+      // Form validation functions
+      const validateName = (name) => name.trim().length >= 3;
+      const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      // Validates international country code style: + followed by 1 to 4 digits, then space/dash/digits
+      const validatePhone = (phone) => /^\+?[1-9]\d{1,14}([-\s]?\d+)+$/.test(phone.trim()) && phone.trim().length >= 7;
+
+      // Event listener for inputs to clear errors on type
+      const inputs = [
+        { id: 'name', validator: validateName, group: 'group-name' },
+        { id: 'email', validator: validateEmail, group: 'group-email' },
+        { id: 'phone', validator: validatePhone, group: 'group-phone' }
+      ];
+
+      inputs.forEach(item => {
+        const el = document.getElementById(item.id);
+        el.addEventListener("input", () => {
+          const group = document.getElementById(item.group);
+          if (item.validator(el.value)) {
+            group.classList.remove("error");
+          }
+        });
+      });
+
+      // Form submit handler
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        let isValid = true;
+        
+        // Validate all fields
+        inputs.forEach(item => {
+          const el = document.getElementById(item.id);
+          const group = document.getElementById(item.group);
+          if (!item.validator(el.value)) {
+            group.classList.add("error");
+            isValid = false;
+          } else {
+            group.classList.remove("error");
+          }
+        });
+
+        if (!isValid) {
+          showToast("Please correct the highlighted form errors.", "error");
+          return;
+        }
+
+        // Gather Form Data
+        const nameVal = document.getElementById("name").value.trim();
+        const emailVal = document.getElementById("email").value.trim();
+        const phoneVal = document.getElementById("phone").value.trim();
+        const companyVal = document.getElementById("company").value.trim();
+
+        // Show loading state
+        submitBtn.disabled = true;
+        loadingSpinner.style.display = "block";
+        submitText.textContent = "Verifying Details...";
+
+        try {
+          // Send request to API
+          const response = await apiRequest("capture-lead", {
+            name: nameVal,
+            email: emailVal,
+            phone: phoneVal,
+            company: companyVal
+          });
+
+          if (response && response.success) {
+            showToast(`Registration Successful! Welcome, ${response.name}`, "success");
+            
+            // Save details to localStorage for session
+            localStorage.setItem("icolors_access_token", response.token);
+            localStorage.setItem("icolors_user_name", response.name);
+            
+            submitText.textContent = "Redirecting...";
+            
+            // Redirect to Portal with token
+            setTimeout(() => {
+              window.location.href = `portal.html?token=${response.token}`;
+            }, 1500);
+          } else {
+            showToast(response.error || "Failed to process registration. Try again.", "error");
+            resetButton();
+          }
+        } catch (error) {
+          showToast("Server Connection Refused. Please check configuration.", "error");
+          resetButton();
+        }
+      });
+
+      function resetButton() {
+        submitBtn.disabled = false;
+        loadingSpinner.style.display = "none";
+        submitText.textContent = "Access Documents";
+      }
+    });
+  </script>
+
+  <style>
+    /* Inline utility animation for spinner */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>
