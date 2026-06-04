@@ -679,3 +679,10 @@ function handleRetrieveFile(data) {
     return makeResponse({ success: false, error: "Failed to download file from Drive: " + err.toString() });
   }
 }
+
+/**
+ * Run this function once in the Apps Script editor to trigger Google Drive authorization.
+ */
+function authorizeDrive() {
+  DriveApp.getRootFolder();
+}
