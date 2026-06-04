@@ -8,7 +8,7 @@
 var ADMIN_PASSCODE = "admin123";
 var SUPPORT_EMAIL = "support@icolors.com";
 // Replace this with your actual hosted website URL (e.g. Vercel or Netlify URL)
-var FRONTEND_PORTAL_URL = "https://icolors-portal.vercel.app/portal.html";
+var FRONTEND_PORTAL_URL = "https://icolors-one.vercel.app/portal.html";
 
 /**
  * Handles browser GET requests
@@ -18,10 +18,10 @@ function doGet(e) {
   
   try {
     if (action === "validate-token") {
-      return handleValidateToken(e.parameter.token);
+      return handleValidateToken(e.parameter.token, e.parameter.fingerprint);
     } 
     else if (action === "get-documents") {
-      return handleGetDocuments(e.parameter.token);
+      return handleGetDocuments(e.parameter.token, e.parameter.fingerprint);
     }
     else if (action === "get-admin-data") {
       return handleGetAdminData(e.parameter.passcode);
@@ -47,10 +47,10 @@ function doPost(e) {
       return handleCaptureLead(requestData);
     }
     else if (action === "validate-token") {
-      return handleValidateToken(requestData.token);
+      return handleValidateToken(requestData.token, requestData.fingerprint);
     }
     else if (action === "get-documents") {
-      return handleGetDocuments(requestData.token);
+      return handleGetDocuments(requestData.token, requestData.fingerprint);
     }
     else if (action === "get-admin-data") {
       return handleGetAdminData(requestData.passcode);
@@ -66,6 +66,12 @@ function doPost(e) {
     }
     else if (action === "delete-document") {
       return handleDeleteDocument(requestData);
+    }
+    else if (action === "request-download-token") {
+      return handleRequestDownloadToken(requestData);
+    }
+    else if (action === "retrieve-file") {
+      return handleRetrieveFile(requestData);
     }
     else {
       return makeResponse({ success: false, error: "Invalid POST Action: " + action });
@@ -159,7 +165,7 @@ function setupDatabase() {
 /**
  * Validate access token
  */
-function handleValidateToken(token) {
+function handleValidateToken(token, fingerprint) {
   if (!token) return makeResponse({ success: false, error: "No token provided." });
   
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -170,6 +176,24 @@ function handleValidateToken(token) {
   for (var i = 1; i < data.length; i++) {
     // Column G (Index 6) is Access Token, Column J (Index 9) is Status
     if (data[i][6] === token && data[i][9] === "Active") {
+      var row = i + 1;
+      var existingFingerprintsStr = data[i][7] || ""; // Column H (Index 7) is IP Address / Fingerprints
+      var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
+      
+      if (fingerprint) {
+        if (fingerprints.indexOf(fingerprint) === -1) {
+          if (fingerprints.length < 2) {
+            fingerprints.push(fingerprint);
+            sheet.getRange(row, 8).setValue(fingerprints.join(",")); // Update in sheet
+          } else {
+            return makeResponse({ 
+              success: false, 
+              error: "Security Limit Exceeded: This access link has been used on too many different devices." 
+            });
+          }
+        }
+      }
+      
       return makeResponse({
         success: true,
         name: data[i][2], // Name
@@ -184,12 +208,12 @@ function handleValidateToken(token) {
 /**
  * Get active documents
  */
-function handleGetDocuments(token) {
-  var validation = handleValidateToken(token);
+function handleGetDocuments(token, fingerprint) {
+  var validation = handleValidateToken(token, fingerprint);
   var validationData = JSON.parse(validation.getContent());
   
   if (!validationData.success) {
-    return makeResponse({ success: false, error: "Unauthorized access token." });
+    return makeResponse({ success: false, error: validationData.error || "Unauthorized access token." });
   }
   
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -206,7 +230,6 @@ function handleGetDocuments(token) {
         id: data[i][0],
         title: data[i][1],
         description: data[i][2],
-        fileUrl: data[i][3], // Only shared once authenticated
         fileType: data[i][4],
         addedDate: data[i][5] ? new Date(data[i][5]).toISOString().split('T')[0] : "",
         status: data[i][6]
@@ -485,4 +508,174 @@ function sendBrandedEmail(recipientName, recipientEmail, token) {
     subject: subject,
     htmlBody: htmlBody
   });
+}
+
+/* ==========================================================================
+   SECURITY & SECURE DOWNLOADS LOGIC
+   ========================================================================== */
+
+/**
+ * Helper to extract Google Drive File/Folder ID from URL or raw ID
+ */
+function extractGoogleDriveId(urlOrId) {
+  if (!urlOrId) return "";
+  
+  // If it's already a clean ID (no slashes, no dots, reasonable length)
+  if (urlOrId.indexOf("/") === -1 && urlOrId.indexOf(".") === -1 && urlOrId.length > 10) {
+    return urlOrId.trim();
+  }
+  
+  // Google Drive File/Folder Link patterns:
+  var fileMatch = urlOrId.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch && fileMatch[1]) return fileMatch[1];
+  
+  var folderMatch = urlOrId.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (folderMatch && folderMatch[1]) return folderMatch[1];
+  
+  var idMatch = urlOrId.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch && idMatch[1]) return idMatch[1];
+  
+  return urlOrId.trim();
+}
+
+/**
+ * Private helper to fetch file or folder (zipped) from DriveApp and return Blob, Name, MimeType
+ */
+function getFileBlob(driveId) {
+  try {
+    var file = DriveApp.getFileById(driveId);
+    return {
+      blob: file.getBlob(),
+      name: file.getName(),
+      mimeType: file.getMimeType()
+    };
+  } catch (e) {
+    // Try as folder
+    try {
+      var folder = DriveApp.getFolderById(driveId);
+      var files = folder.getFiles();
+      var blobs = [];
+      while (files.hasNext()) {
+        var f = files.next();
+        blobs.push(f.getBlob());
+      }
+      if (blobs.length === 0) {
+        throw new Error("Folder is empty");
+      }
+      var zipBlob = Utilities.zip(blobs, folder.getName() + ".zip");
+      return {
+        blob: zipBlob,
+        name: folder.getName() + ".zip",
+        mimeType: "application/zip"
+      };
+    } catch (folderErr) {
+      throw new Error("Invalid Google Drive ID or permission denied: " + e.toString() + " / " + folderErr.toString());
+    }
+  }
+}
+
+/**
+ * Request a short-lived download token (60 seconds)
+ */
+function handleRequestDownloadToken(data) {
+  var token = data.token;
+  var fingerprint = data.fingerprint;
+  var docId = data.docId;
+  
+  if (!token) return makeResponse({ success: false, error: "No token provided." });
+  if (!docId) return makeResponse({ success: false, error: "No document ID provided." });
+  
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var leadsSheet = ss.getSheetByName("Leads");
+  if (!leadsSheet) return makeResponse({ success: false, error: "Database not initialized." });
+  
+  var leadsData = leadsSheet.getDataRange().getValues();
+  var leadFound = false;
+  var authorized = false;
+  
+  for (var i = 1; i < leadsData.length; i++) {
+    if (leadsData[i][6] === token && leadsData[i][9] === "Active") {
+      leadFound = true;
+      var existingFingerprintsStr = leadsData[i][7] || "";
+      var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
+      
+      if (fingerprint) {
+        if (fingerprints.indexOf(fingerprint) !== -1) {
+          authorized = true;
+        }
+      }
+      break;
+    }
+  }
+  
+  if (!leadFound) {
+    return makeResponse({ success: false, error: "Access token is invalid or inactive." });
+  }
+  
+  if (!authorized) {
+    return makeResponse({ success: false, error: "Security validation failed: Unauthorized device." });
+  }
+  
+  // Generate a secure download token using CacheService (valid for 60 seconds)
+  var dlToken = "dl-" + Utilities.getUuid();
+  var cache = CacheService.getScriptCache();
+  cache.put(dlToken, docId, 60);
+  
+  return makeResponse({ success: true, dlToken: dlToken });
+}
+
+/**
+ * Retrieve file data privately via Apps Script proxy and return Base64 Data URL
+ */
+function handleRetrieveFile(data) {
+  var dlToken = data.dlToken;
+  if (!dlToken) return makeResponse({ success: false, error: "No download token provided." });
+  
+  var cache = CacheService.getScriptCache();
+  var docId = cache.get(dlToken);
+  
+  if (!docId) {
+    return makeResponse({ success: false, error: "Download link is invalid or has expired." });
+  }
+  
+  // Immediately remove token to enforce single-use
+  cache.remove(dlToken);
+  
+  // Find document URL/ID
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var docsSheet = ss.getSheetByName("Documents");
+  if (!docsSheet) return makeResponse({ success: false, error: "Documents database missing." });
+  
+  var docsData = docsSheet.getDataRange().getValues();
+  var fileUrlOrId = "";
+  
+  for (var i = 1; i < docsData.length; i++) {
+    if (docsData[i][0] === docId) {
+      fileUrlOrId = docsData[i][3]; // Column D
+      break;
+    }
+  }
+  
+  if (!fileUrlOrId) {
+    return makeResponse({ success: false, error: "Document not found." });
+  }
+  
+  var driveId = extractGoogleDriveId(fileUrlOrId);
+  if (!driveId) {
+    return makeResponse({ success: false, error: "Failed to parse Google Drive ID." });
+  }
+  
+  try {
+    var fileInfo = getFileBlob(driveId);
+    var base64Data = Utilities.base64Encode(fileInfo.blob.getBytes());
+    var dataUrl = "data:" + fileInfo.mimeType + ";base64," + base64Data;
+    
+    return makeResponse({
+      success: true,
+      data: dataUrl,
+      filename: fileInfo.name
+    });
+  } catch (err) {
+    return makeResponse({ success: false, error: "Failed to download file from Drive: " + err.toString() });
+  }
 }

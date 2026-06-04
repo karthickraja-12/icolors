@@ -477,15 +477,22 @@ document.addEventListener("DOMContentLoaded", () => {
   cancelDocBtn.onclick = () => toggleModal(false);
   closeDocBtn.onclick = () => toggleModal(false);
 
-  // Helper to convert standard Google Drive file links to direct download link
-  function convertGoogleDriveLink(url) {
-    if (!url) return url;
+  // Helper to extract Google Drive File ID from standard sharing or direct links
+  function extractGoogleDriveId(url) {
+    if (!url) return "";
+    
+    // Match standard file link: /file/d/FILE_ID
     const fileIdRegex = /\/file\/d\/([a-zA-Z0-9_-]+)/;
     const match = url.match(fileIdRegex);
-    if (match && match[1]) {
-      return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-    }
-    return url;
+    if (match && match[1]) return match[1];
+    
+    // Match direct download link: ?id=FILE_ID
+    const idRegex = /[?&]id=([a-zA-Z0-9_-]+)/;
+    const matchId = url.match(idRegex);
+    if (matchId && matchId[1]) return matchId[1];
+    
+    // Return original string if it is already the raw ID
+    return url.trim();
   }
 
   // Submit Modal Handler (Add or Update)
@@ -499,20 +506,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const typeVal = document.getElementById("doc-type").value;
     const statusVal = document.getElementById("doc-status").value;
 
-    // Auto-convert standard file link to direct download
-    let cleanUrlVal = urlVal;
-    if (urlVal.includes("drive.google.com/file/d/")) {
-      cleanUrlVal = convertGoogleDriveLink(urlVal);
-      if (cleanUrlVal !== urlVal) {
-        showToast("Converted Google Drive link to Direct Download.", "info");
-      }
+    // Automatically extract Google Drive File ID
+    const driveFileId = extractGoogleDriveId(urlVal);
+    if (urlVal !== driveFileId && urlVal.includes("drive.google.com")) {
+      showToast("Extracted Google Drive File ID for secure storage.", "info");
     }
 
     const payload = {
       passcode: adminPasscode,
       title: titleVal,
       description: descVal,
-      fileUrl: cleanUrlVal,
+      fileUrl: driveFileId,
       fileType: typeVal,
       status: statusVal
     };

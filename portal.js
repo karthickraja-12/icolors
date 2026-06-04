@@ -187,25 +187,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Handle Document Log and Forwarding
+  // Handle Document Log and Forwarding via Single-Use Download Tokens & Proxy
   async function handleDocumentAction(doc, actionType) {
     try {
-      // Async log action
+      showLoading(true);
+      showToast(`${actionType === "Viewed File" ? "Requesting access to" : "Preparing download of"} ${doc.title}...`, "info");
+      
+      // Step 1: Request temporary single-use download token
+      const tokenRes = await apiRequest("request-download-token", {
+        token: token,
+        docId: doc.id
+      });
+      
+      if (!tokenRes || !tokenRes.success) {
+        showToast(tokenRes.error || "Access denied. Cannot generate download ticket.", "error");
+        showLoading(false);
+        return;
+      }
+      
+      // Step 2: Retrieve the file content proxy stream (Base64)
+      const fileRes = await apiRequest("retrieve-file", {
+        dlToken: tokenRes.dlToken
+      });
+      
+      if (!fileRes || !fileRes.success) {
+        showToast(fileRes.error || "Failed to download file.", "error");
+        showLoading(false);
+        return;
+      }
+      
+      // Step 3: Trigger browser download using temporary anchor link
+      const a = document.createElement("a");
+      a.href = fileRes.data;
+      a.download = fileRes.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Step 4: Log action on server
       apiRequest("log-access", {
         token: token,
         docName: doc.title,
         actionType: actionType
-      }).catch(err => console.error("Access logging failed:", err)); // Silently catch logging error
+      }).catch(err => console.error("Access logging failed:", err));
       
-      // Alert and open URL
-      showToast(`${actionType === "Viewed File" ? "Opening" : "Downloading"} ${doc.title}...`, "success");
-      
-      setTimeout(() => {
-        // Open file in new tab
-        window.open(doc.fileUrl, "_blank");
-      }, 300);
+      showToast(`${doc.title} downloaded successfully!`, "success");
     } catch (e) {
       console.error(e);
+      showToast("An error occurred during file transfer.", "error");
+    } finally {
+      showLoading(false);
     }
   }
 

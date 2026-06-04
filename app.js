@@ -5,7 +5,7 @@
 const CONFIG = {
   // Replace with your Google Apps Script Web App URL once deployed, e.g. "https://script.google.com/macros/s/..."
   API_URL: "https://script.google.com/macros/s/AKfycbxpDOqcPrAvRU-9quoUC0NKgAcdURQi5XApWAO9NHJgivVS-ze2RPpbQtQLqZHfyrvO/exec",
-  DEFAULT_ADMIN_PASSCODE: "Icolors@123"
+  DEFAULT_ADMIN_PASSCODE: "admin123"
 };
 
 // Mock Database Initializer (for local preview/testing without Apps Script)
@@ -145,6 +145,11 @@ function isMockMode() {
 
 // Global API Request Handler
 async function apiRequest(action, data = {}, method = "POST") {
+  // Automatically inject device fingerprint for client actions
+  if (action !== "get-admin-data" && !data.fingerprint) {
+    data.fingerprint = generateDeviceFingerprint();
+  }
+
   if (isMockMode()) {
     return handleMockRequest(action, data);
   }
@@ -213,7 +218,7 @@ function handleMockRequest(action, data) {
             phone: data.phone,
             company: data.company || "",
             token: token,
-            ip: "127.0.0.1",
+            ip: data.fingerprint || "", // Use IP column to store registered fingerprints in mock mode
             device: getDeviceType(),
             status: "Active"
           };
@@ -238,10 +243,75 @@ function handleMockRequest(action, data) {
         case "validate-token":
           const activeLead = leads.find(l => l.token === data.token && l.status === "Active");
           if (activeLead) {
+            // Enforce device lock limit of 2 fingerprints
+            let fps = activeLead.ip ? activeLead.ip.split(",") : [];
+            if (data.fingerprint && !fps.includes(data.fingerprint)) {
+              if (fps.length < 2) {
+                fps.push(data.fingerprint);
+                activeLead.ip = fps.join(",");
+                localStorage.setItem("icolors_leads", JSON.stringify(leads));
+              } else {
+                return resolve({ success: false, error: "Security Limit Exceeded: This access link has been used on too many different devices." });
+              }
+            }
             resolve({ success: true, name: activeLead.name, leadId: activeLead.id });
           } else {
             resolve({ success: false, error: "Access token is invalid or expired." });
           }
+          break;
+
+        case "request-download-token":
+          const dlLead = leads.find(l => l.token === data.token && l.status === "Active");
+          if (!dlLead) {
+            return resolve({ success: false, error: "Unauthorized access token." });
+          }
+          // Validate fingerprint belongs to lead
+          let dlFps = dlLead.ip ? dlLead.ip.split(",") : [];
+          if (data.fingerprint && !dlFps.includes(data.fingerprint)) {
+            return resolve({ success: false, error: "Unauthorized device." });
+          }
+
+          const dlToken = 'mock-dl-' + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem("mock_dl_" + dlToken, JSON.stringify({
+            docId: data.docId,
+            timestamp: Date.now()
+          }));
+          resolve({ success: true, dlToken: dlToken });
+          break;
+
+        case "retrieve-file":
+          const ticketDataStr = localStorage.getItem("mock_dl_" + data.dlToken);
+          if (!ticketDataStr) {
+            return resolve({ success: false, error: "Download link is invalid or has already been used." });
+          }
+          // Immediately delete (single-use)
+          localStorage.removeItem("mock_dl_" + data.dlToken);
+          
+          const ticket = JSON.parse(ticketDataStr);
+          if (Date.now() - ticket.timestamp > 60000) {
+            return resolve({ success: false, error: "Download ticket has expired (valid for 60s)." });
+          }
+
+          const targetDoc = docs.find(d => d.id === ticket.docId);
+          if (!targetDoc) {
+            return resolve({ success: false, error: "Document not found." });
+          }
+
+          // Return base64 text payload representing the file content
+          let extension = "zip";
+          let mime = "application/zip";
+          if (targetDoc.fileType === "PDF") { extension = "pdf"; mime = "application/pdf"; }
+          else if (targetDoc.fileType === "Spreadsheet") { extension = "xlsx"; mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; }
+          else if (targetDoc.fileType === "Presentation") { extension = "pptx"; mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"; }
+
+          const sampleText = `This is a secure, authenticated download for: ${targetDoc.title}.\nRetrieved via direct download proxy from iColors.`;
+          const base64Content = btoa(unescape(encodeURIComponent(sampleText)));
+          
+          resolve({
+            success: true,
+            data: `data:${mime};base64,${base64Content}`,
+            filename: `${targetDoc.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${extension}`
+          });
           break;
 
         case "get-documents":
@@ -433,3 +503,22 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initSetupBanner();
 });
+
+// Stable browser fingerprint utility
+function generateDeviceFingerprint() {
+  const ua = navigator.userAgent;
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
+  const language = navigator.language || "en";
+  
+  // Create a combined string of browser attributes
+  const rawString = `${ua}|${screenWidth}x${screenHeight}|${language}`;
+  
+  let hash = 0;
+  for (let i = 0; i < rawString.length; i++) {
+    const char = rawString.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return "fp-" + Math.abs(hash).toString(36);
+}
