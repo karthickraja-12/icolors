@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
 
     if (paginatedLeads.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">No leads matching criteria.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--text-muted);">No leads matching criteria.</td></tr>`;
       pageInfo.textContent = "Showing 0-0 of 0 leads";
       prevBtn.disabled = true;
       nextBtn.disabled = true;
@@ -302,6 +302,19 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         statusBadge = `<span class="status-badge inactive">${lead.status || 'Inactive'}</span>`;
       }
+
+      // Build expiry date cell
+      let expiryCell = `<span style="color: var(--text-muted); font-style: italic;">—</span>`;
+      if (lead.status === "Active" && lead.expiry) {
+        const expiryDate = new Date(lead.expiry);
+        const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+        const formattedDate = expiryDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+        const daysColor = daysLeft <= 3 ? "var(--danger)" : daysLeft <= 7 ? "var(--warning)" : "var(--success)";
+        expiryCell = `
+          <span style="font-size: 0.82rem; font-weight: 500;">${formattedDate}</span>
+          <br><span style="font-size: 0.72rem; font-weight: 600; color: ${daysColor};">${daysLeft > 0 ? daysLeft + "d left" : "Expired"}</span>
+        `;
+      }
       
       let actionBtn = "";
       if (lead.status === "Pending") {
@@ -318,6 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td style="white-space: nowrap;">${lead.phone}</td>
         <td>${lead.company || '<span style="color: var(--text-muted); font-style: italic;">None</span>'}</td>
         <td>${statusBadge}</td>
+        <td style="font-size: 0.82rem; line-height: 1.4;">${expiryCell}</td>
         <td><span style="font-size: 0.8rem; background: var(--bg-tertiary); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">${lead.device}</span></td>
         <td style="font-family: monospace; font-size: 0.75rem;" title="${lead.token}">${lead.token.substring(0, 12)}...</td>
         <td style="text-align: right; white-space: nowrap;">${actionBtn}</td>
@@ -336,14 +350,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function approveLead(id, name) {
-    if (!confirm(`Confirm on-spot payment and activate access for "${name}"?`)) {
+    if (!confirm(`Confirm on-spot payment and activate 15-day access for "${name}"?`)) {
       return;
     }
     
     try {
       const response = await apiRequest("activate-lead", { passcode: adminPasscode, leadId: id });
       if (response && response.success) {
-        showToast(`Approved lead "${name}". Access link sent.`, "success");
+        showToast(`Approved! "${name}" has 15-day access. Link sent.`, "success");
         await refreshData();
       } else {
         showToast(response.error || "Failed to approve lead.", "error");
@@ -360,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const headers = ["Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Token", "Device Type", "IP Address", "Status"];
+    const headers = ["Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Token", "Device Type", "IP Address", "Status", "Expiry Date"];
     const rows = leadsData.map(lead => [
       lead.id,
       `"${lead.timestamp}"`,
@@ -371,7 +385,8 @@ document.addEventListener("DOMContentLoaded", () => {
       `"${lead.token}"`,
       lead.device || "",
       lead.ip || "",
-      lead.status || ""
+      lead.status || "",
+      lead.expiry ? new Date(lead.expiry).toLocaleDateString("en-GB") : ""
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," 

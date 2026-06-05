@@ -23,7 +23,8 @@ const MOCK_DB = {
           token: "8f7f3e5a-c9c2-4f65-bca2-9284b9f67f91",
           ip: "192.168.1.15",
           device: "Desktop",
-          status: "Active"
+          status: "Active",
+          expiry: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString()
         },
         {
           id: "L-102",
@@ -35,7 +36,8 @@ const MOCK_DB = {
           token: "bca2e5a9-2849-4f65-8f7f-9284b9f67f92",
           ip: "116.12.83.4",
           device: "Mobile",
-          status: "Active"
+          status: "Active",
+          expiry: new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString()
         },
         {
           id: "L-103",
@@ -47,7 +49,8 @@ const MOCK_DB = {
           token: "87f3-c9c2-4f65-bca2-mock-token-3",
           ip: "82.234.12.189",
           device: "Tablet",
-          status: "Active"
+          status: "Pending",
+          expiry: ""
         }
       ];
       localStorage.setItem("icolors_leads", JSON.stringify(defaultLeads));
@@ -209,6 +212,23 @@ function handleMockRequest(action, data) {
             return resolve({ success: false, error: "Invalid phone number." });
           }
 
+          // Check if email already exists
+          const existingLead = leads.find(l => l.email.toLowerCase() === data.email.toLowerCase());
+          if (existingLead) {
+            if (existingLead.status === "Active" && existingLead.expiry) {
+              const expDate = new Date(existingLead.expiry);
+              if (new Date() < expDate) {
+                // Still within the 15-day window — let them back in
+                return resolve({ success: true, token: existingLead.token, name: existingLead.name, alreadyActive: true });
+              }
+            }
+            // Expired or Pending — reset to Pending
+            existingLead.status = "Pending";
+            existingLead.expiry = "";
+            localStorage.setItem("icolors_leads", JSON.stringify(leads));
+            return resolve({ success: true, token: existingLead.token, name: existingLead.name });
+          }
+
           const token = 'mock-' + Math.random().toString(36).substr(2, 9) + '-' + Math.random().toString(36).substr(2, 9);
           const newLead = {
             id: "L-" + (100 + leads.length + 1),
@@ -218,24 +238,14 @@ function handleMockRequest(action, data) {
             phone: data.phone,
             company: data.company || "",
             token: token,
-            ip: data.fingerprint || "", // Use IP column to store registered fingerprints in mock mode
+            ip: data.fingerprint || "",
             device: getDeviceType(),
-            status: "Pending"
+            status: "Pending",
+            expiry: ""
           };
 
           leads.push(newLead);
           localStorage.setItem("icolors_leads", JSON.stringify(leads));
-
-          // Log Portal Open automatically
-          const openLog = {
-            timestamp: new Date().toLocaleString(),
-            leadId: newLead.id,
-            token: newLead.token,
-            docName: "Document Access Portal",
-            action: "Opened Portal"
-          };
-          logs.push(openLog);
-          localStorage.setItem("icolors_logs", JSON.stringify(logs));
 
           resolve({ success: true, token: token, name: data.name });
           break;
@@ -244,6 +254,21 @@ function handleMockRequest(action, data) {
           const leadRecord = leads.find(l => l.token === data.token);
           if (leadRecord) {
             if (leadRecord.status === "Active") {
+              // Check expiry date first
+              if (leadRecord.expiry) {
+                const expDate = new Date(leadRecord.expiry);
+                if (new Date() > expDate) {
+                  // Expired! Revert to Pending
+                  leadRecord.status = "Pending";
+                  leadRecord.expiry = "";
+                  localStorage.setItem("icolors_leads", JSON.stringify(leads));
+                  return resolve({
+                    success: false,
+                    isPending: true,
+                    error: "Your 15-day access has expired. Please make payment at the counter to reactivate."
+                  });
+                }
+              }
               // Enforce device lock limit of 2 fingerprints
               let fps = leadRecord.ip ? leadRecord.ip.split(",") : [];
               if (data.fingerprint && !fps.includes(data.fingerprint)) {
@@ -422,7 +447,10 @@ function handleMockRequest(action, data) {
           } else {
             const leadIdx = leads.findIndex(l => l.id === data.leadId);
             if (leadIdx > -1) {
+              // Set Active and calculate 15-day expiry from now
+              const expiryDate = new Date(Date.now() + (15 * 24 * 60 * 60 * 1000));
               leads[leadIdx].status = "Active";
+              leads[leadIdx].expiry = expiryDate.toISOString();
               localStorage.setItem("icolors_leads", JSON.stringify(leads));
               resolve({ success: true });
             } else {

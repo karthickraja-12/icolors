@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 2. Validate Token
   showLoading(true);
   try {
+    // Note: apiRequest auto-injects device fingerprint via generateDeviceFingerprint()
     const response = await apiRequest("validate-token", { token });
     
     if (response && response.success) {
@@ -55,7 +56,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         actionType: "Opened Portal"
       });
     } else if (response && response.isPending) {
-      showPendingVerification(response.error || "Pending Payment Activation. Please pay the representative on-spot to unlock access.");
+      // Distinguish between expired and pending-payment states
+      const isExpired = response.error && response.error.toLowerCase().includes("expired");
+      if (isExpired) {
+        showExpired(response.error);
+      } else {
+        showPendingVerification(response.error || "Pending Payment Activation. Please pay the representative on-spot to unlock access.");
+      }
     } else {
       localStorage.removeItem("icolors_access_token");
       localStorage.removeItem("icolors_user_name");
@@ -289,25 +296,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     portalContent.style.display = "none";
     portalFooter.style.display = "none";
     
-    // Customize access denied visual to look like a premium pending notice
     deniedMessage.innerHTML = `
       <div style="text-align: center;">
-        <span style="font-size: 3rem; display: block; margin-bottom: 1rem; animation: pulse 2s infinite;">⏳</span>
-        <h3 style="margin-bottom: 0.5rem; color: var(--warning);">Payment Verification Pending</h3>
-        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.5rem;">${message}</p>
-        <button class="btn btn-secondary" onclick="window.location.reload()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.25rem; margin: 0 auto;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(245,158,11,0.15); border: 2px solid var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="34" height="34">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
-          Check Activation Status
-        </button>
+        </div>
+        <h3 style="margin-bottom: 0.5rem; color: var(--warning); font-size: 1.35rem;">Payment Activation Required</h3>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.75rem; line-height: 1.6;">${message}</p>
+        <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.5rem;">Once the representative confirms your payment, you will receive an email with your access link.</p>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 280px; margin: 0 auto;">
+          <button class="btn btn-secondary" onclick="window.location.reload()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 15px; height: 15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+            Check Activation Status
+          </button>
+          <a href="index.html" class="btn" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: none; padding: 0.4rem;">← Back to Registration</a>
+        </div>
       </div>
-      <style>
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.1); }
-        }
-      </style>
+    `;
+    userGreeting.style.display = "none";
+    logoutBtn.style.display = "none";
+  }
+
+  function showExpired(message) {
+    portalDenied.style.display = "flex";
+    portalContent.style.display = "none";
+    portalFooter.style.display = "none";
+    localStorage.removeItem("icolors_access_token");
+    localStorage.removeItem("icolors_user_name");
+    
+    deniedMessage.innerHTML = `
+      <div style="text-align: center;">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(239,68,68,0.12); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="34" height="34">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h3 style="margin-bottom: 0.5rem; color: var(--danger); font-size: 1.35rem;">15-Day Access Expired</h3>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.75rem; line-height: 1.6;">${message}</p>
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left;">
+          <p style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">How to Reactivate:</p>
+          <ol style="font-size: 0.82rem; color: var(--text-secondary); margin: 0; padding-left: 1.25rem; line-height: 1.8;">
+            <li>Visit the iColors representative on-spot</li>
+            <li>Make your payment for a new 15-day cycle</li>
+            <li>Register again using the same email</li>
+            <li>The representative will approve your access</li>
+          </ol>
+        </div>
+        <a href="index.html" class="btn btn-primary" style="padding: 0.7rem 2rem; display: inline-block;">Re-Register Now</a>
+      </div>
     `;
     userGreeting.style.display = "none";
     logoutBtn.style.display = "none";

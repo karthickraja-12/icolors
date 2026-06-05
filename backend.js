@@ -103,10 +103,10 @@ function setupDatabase() {
   if (!leadsSheet) {
     leadsSheet = ss.insertSheet("Leads");
     leadsSheet.appendRow([
-      "Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Access Token", "IP Address", "Device Type", "Status"
+      "Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Access Token", "IP Address", "Device Type", "Status", "Expiry Date"
     ]);
     // Format headers
-    leadsSheet.getRange("A1:J1").setFontWeight("bold").setBackground("#f1f5f9");
+    leadsSheet.getRange("A1:K1").setFontWeight("bold").setBackground("#f1f5f9");
   }
   
   // 2. Access Logs Sheet
@@ -177,10 +177,30 @@ function handleValidateToken(token, fingerprint) {
   
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    // Column G (Index 6) is Access Token, Column J (Index 9) is Status
+    // Column G (Index 6) is Access Token, Column J (Index 9) is Status, Column K (Index 10) is Expiry Date
     if (data[i][6] === token) {
-      if (data[i][9] === "Active") {
-        var row = i + 1;
+      var status = data[i][9];
+      var expiryStr = data[i][10];
+      var row = i + 1;
+      
+      if (status === "Active") {
+        // Check if access has expired (15 days check)
+        if (expiryStr) {
+          var expiryDate = new Date(expiryStr);
+          var now = new Date();
+          
+          if (now > expiryDate) {
+            // Access has expired! Revert status to Pending and clear expiry
+            sheet.getRange(row, 10).setValue("Pending");
+            sheet.getRange(row, 11).setValue("");
+            return makeResponse({
+              success: false,
+              isPending: true,
+              error: "Your 15-day access has expired. Please make payment at the counter to reactivate."
+            });
+          }
+        }
+        
         var existingFingerprintsStr = data[i][7] || ""; // Column H (Index 7) is IP Address / Fingerprints
         var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
         
@@ -203,7 +223,7 @@ function handleValidateToken(token, fingerprint) {
           name: data[i][2], // Name
           leadId: data[i][0] // Lead ID
         });
-      } else if (data[i][9] === "Pending") {
+      } else if (status === "Pending") {
         return makeResponse({
           success: false,
           isPending: true,
@@ -267,11 +287,49 @@ function handleCaptureLead(data) {
       sheet = ss.getSheetByName("Leads");
     }
     
+    var values = sheet.getDataRange().getValues();
+    var existingRowIndex = -1;
+    var existingStatus = "";
+    var existingToken = "";
+    var existingExpiryStr = "";
+    
+    // Check if email already exists
+    for (var i = 1; i < values.length; i++) {
+      if (values[i][3].toString().toLowerCase() === data.email.toLowerCase()) {
+        existingRowIndex = i + 1;
+        existingToken = values[i][6];
+        existingStatus = values[i][9];
+        existingExpiryStr = values[i][10] || "";
+        break;
+      }
+    }
+    
+    if (existingRowIndex !== -1) {
+      if (existingStatus === "Active") {
+        // Check if existing active subscription is still valid
+        if (existingExpiryStr) {
+          var expiryDate = new Date(existingExpiryStr);
+          var now = new Date();
+          if (now < expiryDate) {
+            // Already paid and active. Resend login link and redirect.
+            sendBrandedEmail(data.name, data.email, existingToken);
+            return makeResponse({ success: true, token: existingToken, name: data.name, alreadyActive: true });
+          }
+        }
+        
+        // If expired active lead, reset status to Pending and clear expiry
+        sheet.getRange(existingRowIndex, 10).setValue("Pending");
+        sheet.getRange(existingRowIndex, 11).setValue("");
+      }
+      // Customer is pending (either registered or expired). Redirect to check payment.
+      return makeResponse({ success: true, token: existingToken, name: data.name });
+    }
+    
     var token = Utilities.getUuid();
     var leadId = "L-" + (sheet.getLastRow() + 100);
     var timestamp = new Date().toLocaleString();
     
-    // Append lead row
+    // Append lead row with Pending status and empty Expiry Date placeholder
     sheet.appendRow([
       leadId,
       timestamp,
@@ -280,12 +338,12 @@ function handleCaptureLead(data) {
       data.phone,
       data.company || "",
       token,
-      "", // IP placeholder (collected client side optionally)
+      "", // IP placeholder
       data.device || "Desktop",
-      "Pending"
+      "Pending",
+      "" // Expiry Date
     ]);
     
-    // Automatic activation & email trigger disabled until payment is verified on-spot
     return makeResponse({ success: true, token: token, name: data.name });
   } catch (error) {
     return makeResponse({ success: false, error: error.toString() });
@@ -351,7 +409,8 @@ function handleGetAdminData(passcode) {
         token: data[i][6],
         ip: data[i][7],
         device: data[i][8],
-        status: data[i][9]
+        status: data[i][9],
+        expiry: data[i][10] ? new Date(data[i][10]).toISOString() : ""
       });
     }
   }
@@ -501,7 +560,13 @@ function handleActivateLead(data) {
   for (var i = 1; i < values.length; i++) {
     if (values[i][0] === data.leadId) {
       var row = i + 1;
+      
+      // Calculate Expiry Date (exactly 15 days from now)
+      var now = new Date();
+      var expiryDate = new Date(now.getTime() + (15 * 24 * 60 * 60 * 1000));
+      
       sheet.getRange(row, 10).setValue("Active"); // Column J (Index 9) is Status
+      sheet.getRange(row, 11).setValue(expiryDate.toISOString()); // Column K (Index 10) is Expiry Date
       
       // Trigger the automated email with the token link now!
       sendBrandedEmail(values[i][2], values[i][3], values[i][6]);
