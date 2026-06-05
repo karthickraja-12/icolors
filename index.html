@@ -172,12 +172,23 @@
             <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.25rem;">Registered as</p>
             <p id="pending-name" style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0;">—</p>
           </div>
+          <!-- Live polling status indicator -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 1.5rem; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 100px; padding: 0.5rem 1.25rem;">
+            <span id="polling-dot" style="width: 10px; height: 10px; border-radius: 50%; background: var(--success); display: inline-block; transition: opacity 0.4s; animation: pollingPulse 2s ease-in-out infinite;"></span>
+            <span id="polling-text" style="font-size: 0.82rem; font-weight: 500; color: var(--success);">Waiting for activation...</span>
+          </div>
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <button onclick="document.getElementById('pending-state').style.display='none'; document.getElementById('lead-form').closest('.glass-card').style.display='block';" class="btn btn-secondary" style="width: 100%;">
+            <button onclick="if(window.pollingInterval) clearInterval(window.pollingInterval); document.getElementById('pending-state').style.display='none'; document.getElementById('lead-form').closest('.glass-card').style.display='block';" class="btn btn-secondary" style="width: 100%;">
               ← Back to Registration
             </button>
           </div>
           <p style="margin-top: 1.5rem; font-size: 0.78rem; color: var(--text-muted);">If you have already paid and not received the link, please check your email's spam folder or contact the representative.</p>
+          <style>
+            @keyframes pollingPulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+              50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+            }
+          </style>
         </div>
       </div>
     </section>
@@ -280,7 +291,8 @@
 
             // Case 2: New registration or re-registration (Pending state — needs admin to approve)
             showToast(`Registered! Please pay the representative to activate access.`, "success");
-            localStorage.setItem("icolors_access_token", response.token);
+            const pendingToken = response.token;
+            localStorage.setItem("icolors_access_token", pendingToken);
             localStorage.setItem("icolors_user_name", response.name);
 
             // Show pending state card
@@ -288,6 +300,9 @@
             document.querySelector(".hero-form .glass-card").style.display = "none";
             document.getElementById("pending-state").style.display = "block";
             resetButton();
+
+            // Start auto-polling every 6 seconds to detect admin approval
+            startActivationPolling(pendingToken);
           } else {
             showToast(response.error || "Failed to process registration. Try again.", "error");
             resetButton();
@@ -298,12 +313,50 @@
         }
       });
 
+      let pollingInterval = null;
+
+      function startActivationPolling(token) {
+        // Clear any existing poll
+        if (pollingInterval) clearInterval(pollingInterval);
+
+        const statusDot = document.getElementById("polling-dot");
+        const statusText = document.getElementById("polling-text");
+
+        let checkCount = 0;
+
+        pollingInterval = setInterval(async () => {
+          checkCount++;
+          try {
+            // Pulse the indicator
+            if (statusDot) {
+              statusDot.style.opacity = "0.3";
+              setTimeout(() => { if (statusDot) statusDot.style.opacity = "1"; }, 500);
+            }
+            if (statusText) statusText.textContent = `Checking activation... (${checkCount})`;
+
+            const res = await apiRequest("validate-token", { token });
+
+            if (res && res.success) {
+              clearInterval(pollingInterval);
+              if (statusText) statusText.textContent = "✓ Access Activated! Redirecting...";
+              showToast("🎉 Access Activated! Redirecting to your dashboard...", "success");
+              setTimeout(() => {
+                window.location.href = `portal.html?token=${token}`;
+              }, 1500);
+            }
+          } catch (e) {
+            // Silently ignore poll errors
+          }
+        }, 6000);
+      }
+
       function resetButton() {
         submitBtn.disabled = false;
         loadingSpinner.style.display = "none";
         submitText.textContent = "Access Documents";
       }
     });
+  
   </script>
 
   <style>

@@ -305,19 +305,47 @@ document.addEventListener("DOMContentLoaded", async () => {
           </svg>
         </div>
         <h3 style="margin-bottom: 0.5rem; color: var(--warning); font-size: 1.35rem;">Payment Activation Required</h3>
-        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.75rem; line-height: 1.6;">${message}</p>
-        <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.5rem;">Once the representative confirms your payment, you will receive an email with your access link.</p>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.25rem; line-height: 1.6;">${message}</p>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 1.5rem; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 100px; padding: 0.5rem 1.25rem;">
+          <span id="portal-polling-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block; animation: portalPulse 2s ease-in-out infinite;"></span>
+          <span id="portal-polling-text" style="font-size: 0.82rem; font-weight: 500; color: #10b981;">Checking activation status automatically...</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.5rem;">You'll be redirected automatically once the representative confirms your payment.</p>
         <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 280px; margin: 0 auto;">
-          <button class="btn btn-secondary" onclick="window.location.reload()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 15px; height: 15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-            Check Activation Status
-          </button>
           <a href="index.html" class="btn" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: none; padding: 0.4rem;">← Back to Registration</a>
         </div>
       </div>
+      <style>
+        @keyframes portalPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+          50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        }
+      </style>
     `;
     userGreeting.style.display = "none";
     logoutBtn.style.display = "none";
+
+    // Auto-poll every 6 seconds to detect admin approval
+    let pollCount = 0;
+    const pendingPollInterval = setInterval(async () => {
+      pollCount++;
+      const dot = document.getElementById("portal-polling-dot");
+      const txt = document.getElementById("portal-polling-text");
+      try {
+        if (dot) { dot.style.opacity = "0.3"; setTimeout(() => { if (dot) dot.style.opacity = "1"; }, 500); }
+        if (txt) txt.textContent = `Checking activation status... (${pollCount})`;
+
+        const res = await apiRequest("validate-token", { token });
+        if (res && res.success) {
+          clearInterval(pendingPollInterval);
+          if (txt) txt.textContent = "✓ Access Activated! Loading dashboard...";
+          showToast("🎉 Access Activated! Loading your dashboard...", "success");
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      } catch (e) { /* Silently ignore */ }
+    }, 6000);
   }
 
   function showExpired(message) {
