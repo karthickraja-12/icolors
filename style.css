@@ -186,6 +186,13 @@ h1, h2, h3, h4, h5, h6 {
   width: auto;
   border-radius: var(--radius-sm);
   object-fit: contain;
+  mix-blend-mode: screen;
+  filter: invert(1) brightness(1.1) contrast(1.1);
+  transition: all var(--transition-normal);
+}
+[data-theme="light"] .logo-img {
+  mix-blend-mode: multiply;
+  filter: none;
 }
 .nav-actions {
   display: flex;

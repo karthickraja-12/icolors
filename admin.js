@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
 
     if (paginatedLeads.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No leads matching criteria.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted);">No leads matching criteria.</td></tr>`;
       pageInfo.textContent = "Showing 0-0 of 0 leads";
       prevBtn.disabled = true;
       nextBtn.disabled = true;
@@ -293,6 +293,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     paginatedLeads.forEach(lead => {
       const row = document.createElement("tr");
+      
+      let statusBadge = "";
+      if (lead.status === "Active") {
+        statusBadge = `<span class="status-badge active">Active</span>`;
+      } else if (lead.status === "Pending") {
+        statusBadge = `<span class="status-badge" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">Pending</span>`;
+      } else {
+        statusBadge = `<span class="status-badge inactive">${lead.status || 'Inactive'}</span>`;
+      }
+      
+      let actionBtn = "";
+      if (lead.status === "Pending") {
+        actionBtn = `<button class="btn btn-primary approve-btn" data-id="${lead.id}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; box-shadow: none;">Approve</button>`;
+      } else {
+        actionBtn = `<span style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Activated</span>`;
+      }
+
       row.innerHTML = `
         <td style="white-space: nowrap; font-size: 0.8rem;">${lead.timestamp}</td>
         <td style="font-weight: 600;">${lead.id}</td>
@@ -300,15 +317,41 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${lead.email}</td>
         <td style="white-space: nowrap;">${lead.phone}</td>
         <td>${lead.company || '<span style="color: var(--text-muted); font-style: italic;">None</span>'}</td>
+        <td>${statusBadge}</td>
         <td><span style="font-size: 0.8rem; background: var(--bg-tertiary); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">${lead.device}</span></td>
         <td style="font-family: monospace; font-size: 0.75rem;" title="${lead.token}">${lead.token.substring(0, 12)}...</td>
+        <td style="text-align: right; white-space: nowrap;">${actionBtn}</td>
       `;
+
+      if (lead.status === "Pending") {
+        row.querySelector(".approve-btn").onclick = () => approveLead(lead.id, lead.name);
+      }
+
       tableBody.appendChild(row);
     });
 
     pageInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${filteredLeads.length} leads`;
     prevBtn.disabled = leadsPage === 1;
     nextBtn.disabled = leadsPage >= Math.ceil(filteredLeads.length / leadsPerPage);
+  }
+
+  async function approveLead(id, name) {
+    if (!confirm(`Confirm on-spot payment and activate access for "${name}"?`)) {
+      return;
+    }
+    
+    try {
+      const response = await apiRequest("activate-lead", { passcode: adminPasscode, leadId: id });
+      if (response && response.success) {
+        showToast(`Approved lead "${name}". Access link sent.`, "success");
+        await refreshData();
+      } else {
+        showToast(response.error || "Failed to approve lead.", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Error processing approval request.", "error");
+    }
   }
 
   function downloadLeadsCSV() {

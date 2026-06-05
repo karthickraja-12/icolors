@@ -220,7 +220,7 @@ function handleMockRequest(action, data) {
             token: token,
             ip: data.fingerprint || "", // Use IP column to store registered fingerprints in mock mode
             device: getDeviceType(),
-            status: "Active"
+            status: "Pending"
           };
 
           leads.push(newLead);
@@ -241,20 +241,30 @@ function handleMockRequest(action, data) {
           break;
 
         case "validate-token":
-          const activeLead = leads.find(l => l.token === data.token && l.status === "Active");
-          if (activeLead) {
-            // Enforce device lock limit of 2 fingerprints
-            let fps = activeLead.ip ? activeLead.ip.split(",") : [];
-            if (data.fingerprint && !fps.includes(data.fingerprint)) {
-              if (fps.length < 2) {
-                fps.push(data.fingerprint);
-                activeLead.ip = fps.join(",");
-                localStorage.setItem("icolors_leads", JSON.stringify(leads));
-              } else {
-                return resolve({ success: false, error: "Security Limit Exceeded: This access link has been used on too many different devices." });
+          const leadRecord = leads.find(l => l.token === data.token);
+          if (leadRecord) {
+            if (leadRecord.status === "Active") {
+              // Enforce device lock limit of 2 fingerprints
+              let fps = leadRecord.ip ? leadRecord.ip.split(",") : [];
+              if (data.fingerprint && !fps.includes(data.fingerprint)) {
+                if (fps.length < 2) {
+                  fps.push(data.fingerprint);
+                  leadRecord.ip = fps.join(",");
+                  localStorage.setItem("icolors_leads", JSON.stringify(leads));
+                } else {
+                  return resolve({ success: false, error: "Security Limit Exceeded: This access link has been used on too many different devices." });
+                }
               }
+              resolve({ success: true, name: leadRecord.name, leadId: leadRecord.id });
+            } else if (leadRecord.status === "Pending") {
+              resolve({ 
+                success: false, 
+                isPending: true, 
+                error: "Pending Payment Activation. Please pay the representative on-spot to unlock access." 
+              });
+            } else {
+              resolve({ success: false, error: "Access token is invalid or inactive." });
             }
-            resolve({ success: true, name: activeLead.name, leadId: activeLead.id });
           } else {
             resolve({ success: false, error: "Access token is invalid or expired." });
           }
@@ -403,6 +413,21 @@ function handleMockRequest(action, data) {
             const updatedDocs = docs.filter(d => d.id !== data.id);
             localStorage.setItem("icolors_docs", JSON.stringify(updatedDocs));
             resolve({ success: true });
+          }
+          break;
+
+        case "activate-lead":
+          if (data.passcode !== CONFIG.DEFAULT_ADMIN_PASSCODE) {
+            resolve({ success: false, error: "Unauthorized." });
+          } else {
+            const leadIdx = leads.findIndex(l => l.id === data.leadId);
+            if (leadIdx > -1) {
+              leads[leadIdx].status = "Active";
+              localStorage.setItem("icolors_leads", JSON.stringify(leads));
+              resolve({ success: true });
+            } else {
+              resolve({ success: false, error: "Lead not found." });
+            }
           }
           break;
 

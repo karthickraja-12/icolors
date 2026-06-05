@@ -54,6 +54,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         docName: "Document Access Portal",
         actionType: "Opened Portal"
       });
+    } else if (response && response.isPending) {
+      showPendingVerification(response.error || "Pending Payment Activation. Please pay the representative on-spot to unlock access.");
     } else {
       localStorage.removeItem("icolors_access_token");
       localStorage.removeItem("icolors_user_name");
@@ -75,7 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     userGreeting.textContent = `Welcome, ${userDisplayName}`;
     userGreeting.style.display = "block";
     
-    welcomeTitle.textContent = `Welcome, ${userDisplayName.split(" ")[0]}`;
+    welcomeTitle.innerHTML = `Welcome to <span style="background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">iColors</span>, ${userDisplayName.split(" ")[0]}`;
     
     logoutBtn.style.display = "block";
     logoutBtn.addEventListener("click", () => {
@@ -282,6 +284,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Display Controllers
+  function showPendingVerification(message) {
+    portalDenied.style.display = "flex";
+    portalContent.style.display = "none";
+    portalFooter.style.display = "none";
+    
+    // Customize access denied visual to look like a premium pending notice
+    deniedMessage.innerHTML = `
+      <div style="text-align: center;">
+        <span style="font-size: 3rem; display: block; margin-bottom: 1rem; animation: pulse 2s infinite;">⏳</span>
+        <h3 style="margin-bottom: 0.5rem; color: var(--warning);">Payment Verification Pending</h3>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.5rem;">${message}</p>
+        <button class="btn btn-secondary" onclick="window.location.reload()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.25rem; margin: 0 auto;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          Check Activation Status
+        </button>
+      </div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.1); }
+        }
+      </style>
+    `;
+    userGreeting.style.display = "none";
+    logoutBtn.style.display = "none";
+  }
+
   function showDenied(message) {
     portalDenied.style.display = "flex";
     portalContent.style.display = "none";

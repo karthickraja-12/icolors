@@ -61,6 +61,9 @@ function doPost(e) {
     else if (action === "add-document") {
       return handleAddDocument(requestData);
     }
+    else if (action === "activate-lead") {
+      return handleActivateLead(requestData);
+    }
     else if (action === "update-document") {
       return handleUpdateDocument(requestData);
     }
@@ -175,30 +178,38 @@ function handleValidateToken(token, fingerprint) {
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     // Column G (Index 6) is Access Token, Column J (Index 9) is Status
-    if (data[i][6] === token && data[i][9] === "Active") {
-      var row = i + 1;
-      var existingFingerprintsStr = data[i][7] || ""; // Column H (Index 7) is IP Address / Fingerprints
-      var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
-      
-      if (fingerprint) {
-        if (fingerprints.indexOf(fingerprint) === -1) {
-          if (fingerprints.length < 2) {
-            fingerprints.push(fingerprint);
-            sheet.getRange(row, 8).setValue(fingerprints.join(",")); // Update in sheet
-          } else {
-            return makeResponse({ 
-              success: false, 
-              error: "Security Limit Exceeded: This access link has been used on too many different devices." 
-            });
+    if (data[i][6] === token) {
+      if (data[i][9] === "Active") {
+        var row = i + 1;
+        var existingFingerprintsStr = data[i][7] || ""; // Column H (Index 7) is IP Address / Fingerprints
+        var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
+        
+        if (fingerprint) {
+          if (fingerprints.indexOf(fingerprint) === -1) {
+            if (fingerprints.length < 2) {
+              fingerprints.push(fingerprint);
+              sheet.getRange(row, 8).setValue(fingerprints.join(",")); // Update in sheet
+            } else {
+              return makeResponse({ 
+                success: false, 
+                error: "Security Limit Exceeded: This access link has been used on too many different devices." 
+              });
+            }
           }
         }
+        
+        return makeResponse({
+          success: true,
+          name: data[i][2], // Name
+          leadId: data[i][0] // Lead ID
+        });
+      } else if (data[i][9] === "Pending") {
+        return makeResponse({
+          success: false,
+          isPending: true,
+          error: "Pending Payment Activation. Please pay the representative on-spot to unlock access."
+        });
       }
-      
-      return makeResponse({
-        success: true,
-        name: data[i][2], // Name
-        leadId: data[i][0] // Lead ID
-      });
     }
   }
   
@@ -271,12 +282,10 @@ function handleCaptureLead(data) {
       token,
       "", // IP placeholder (collected client side optionally)
       data.device || "Desktop",
-      "Active"
+      "Pending"
     ]);
     
-    // Send automated branded email in background
-    sendBrandedEmail(data.name, data.email, token);
-    
+    // Automatic activation & email trigger disabled until payment is verified on-spot
     return makeResponse({ success: true, token: token, name: data.name });
   } catch (error) {
     return makeResponse({ success: false, error: error.toString() });
@@ -472,6 +481,36 @@ function handleDeleteDocument(data) {
   }
   
   return makeResponse({ success: false, error: "Document ID not found." });
+}
+
+/**
+ * Admin Panel: Activate lead (approve payment on-spot)
+ */
+function handleActivateLead(data) {
+  if (data.passcode !== ADMIN_PASSCODE) {
+    return makeResponse({ success: false, error: "Unauthorized admin access." });
+  }
+  
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Leads");
+  if (!sheet) return makeResponse({ success: false, error: "Leads database missing." });
+  
+  var range = sheet.getDataRange();
+  var values = range.getValues();
+  
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][0] === data.leadId) {
+      var row = i + 1;
+      sheet.getRange(row, 10).setValue("Active"); // Column J (Index 9) is Status
+      
+      // Trigger the automated email with the token link now!
+      sendBrandedEmail(values[i][2], values[i][3], values[i][6]);
+      
+      return makeResponse({ success: true });
+    }
+  }
+  
+  return makeResponse({ success: false, error: "Lead ID not found: " + data.leadId });
 }
 
 /* ==========================================================================
