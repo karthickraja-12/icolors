@@ -215,17 +215,20 @@ function handleMockRequest(action, data) {
           // Check if email already exists
           const existingLead = leads.find(l => l.email.toLowerCase() === data.email.toLowerCase());
           if (existingLead) {
-            if (existingLead.status === "Active" && existingLead.expiry) {
-              const expDate = new Date(existingLead.expiry);
-              if (new Date() < expDate) {
-                // Still within the 15-day window — let them back in
+            if (existingLead.status === "Active") {
+              // Allow if: no expiry set (legacy) OR expiry hasn't passed yet
+              const isStillActive = !existingLead.expiry || (new Date() < new Date(existingLead.expiry));
+              if (isStillActive) {
+                // Still within active window — let them straight back in
                 return resolve({ success: true, token: existingLead.token, name: existingLead.name, alreadyActive: true });
               }
             }
-            // Expired or Pending — reset to Pending
-            existingLead.status = "Pending";
-            existingLead.expiry = "";
-            localStorage.setItem("icolors_leads", JSON.stringify(leads));
+            // Only resets to Pending if expired OR was already Pending
+            if (existingLead.status === "Active") {
+              existingLead.status = "Pending";
+              existingLead.expiry = "";
+              localStorage.setItem("icolors_leads", JSON.stringify(leads));
+            }
             return resolve({ success: true, token: existingLead.token, name: existingLead.name });
           }
 

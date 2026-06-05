@@ -306,22 +306,20 @@ function handleCaptureLead(data) {
     
     if (existingRowIndex !== -1) {
       if (existingStatus === "Active") {
-        // Check if existing active subscription is still valid
-        if (existingExpiryStr) {
-          var expiryDate = new Date(existingExpiryStr);
-          var now = new Date();
-          if (now < expiryDate) {
-            // Already paid and active. Resend login link and redirect.
-            sendBrandedEmail(data.name, data.email, existingToken);
-            return makeResponse({ success: true, token: existingToken, name: data.name, alreadyActive: true });
-          }
+        // Allow if: no expiry set (legacy/manual activation) OR expiry hasn't passed yet
+        var isStillActive = !existingExpiryStr || (new Date() < new Date(existingExpiryStr));
+        
+        if (isStillActive) {
+          // Customer is still within their active window — resend link and redirect
+          sendBrandedEmail(data.name, data.email, existingToken);
+          return makeResponse({ success: true, token: existingToken, name: data.name, alreadyActive: true });
         }
         
-        // If expired active lead, reset status to Pending and clear expiry
+        // Only reaches here if expiry genuinely passed — reset to Pending
         sheet.getRange(existingRowIndex, 10).setValue("Pending");
         sheet.getRange(existingRowIndex, 11).setValue("");
       }
-      // Customer is pending (either registered or expired). Redirect to check payment.
+      // Customer is Pending (new or expired). Return token so they can see pending state.
       return makeResponse({ success: true, token: existingToken, name: data.name });
     }
     
