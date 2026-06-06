@@ -296,7 +296,18 @@ document.addEventListener("DOMContentLoaded", () => {
       
       let statusBadge = "";
       if (lead.status === "Active") {
-        statusBadge = `<span class="status-badge active">Active</span>`;
+        let docCountStr = "";
+        if (lead.unlockedDocs) {
+          if (lead.unlockedDocs === "*" || lead.unlockedDocs.toLowerCase() === "all") {
+            docCountStr = " (All)";
+          } else {
+            const count = lead.unlockedDocs.split(",").filter(Boolean).length;
+            docCountStr = ` (${count} File${count > 1 ? "s" : ""})`;
+          }
+        } else {
+          docCountStr = " (All)";
+        }
+        statusBadge = `<span class="status-badge active">Active${docCountStr}</span>`;
       } else if (lead.status === "Pending") {
         statusBadge = `<span class="status-badge" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">Pending</span>`;
       } else {
@@ -318,9 +329,14 @@ document.addEventListener("DOMContentLoaded", () => {
       
       let actionBtn = "";
       if (lead.status === "Pending") {
-        actionBtn = `<button class="btn btn-primary approve-btn" data-id="${lead.id}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; box-shadow: none;">Approve</button>`;
+        actionBtn = `
+          <button class="btn btn-primary approve-btn" data-id="${lead.id}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; box-shadow: none; margin-right: 0.5rem;">Approve</button>
+          <button class="btn btn-secondary manage-access-btn" data-id="${lead.id}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage</button>
+        `;
       } else {
-        actionBtn = `<span style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Activated</span>`;
+        actionBtn = `
+          <button class="btn btn-secondary manage-access-btn" data-id="${lead.id}" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Manage Access</button>
+        `;
       }
 
       row.innerHTML = `
@@ -340,6 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (lead.status === "Pending") {
         row.querySelector(".approve-btn").onclick = () => approveLead(lead.id, lead.name);
       }
+      row.querySelector(".manage-access-btn").onclick = () => openLeadAccessModal(lead);
 
       tableBody.appendChild(row);
     });
@@ -515,6 +532,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const docForm = document.getElementById("doc-form");
   const modalTitle = document.getElementById("modal-title");
 
+  // Lead Access Modal Elements
+  const leadAccessModal = document.getElementById("lead-access-modal");
+  const closeAccessBtn = document.getElementById("lead-access-modal-close");
+  const cancelAccessBtn = document.getElementById("lead-access-modal-cancel");
+  const leadAccessForm = document.getElementById("lead-access-form");
+  const accessLeadId = document.getElementById("access-lead-id");
+  const accessLeadNameLabel = document.getElementById("access-lead-name-label");
+  const accessLeadEmailLabel = document.getElementById("access-lead-email-label");
+  const accessLeadStatus = document.getElementById("access-lead-status");
+  const accessLeadExpiry = document.getElementById("access-lead-expiry");
+  const accessUnlockAll = document.getElementById("access-unlock-all");
+  const accessDocsContainer = document.getElementById("access-documents-list-container");
+
   // Modal open/close controls
   const toggleModal = (show) => {
     if (show) {
@@ -534,6 +564,135 @@ document.addEventListener("DOMContentLoaded", () => {
   
   cancelDocBtn.onclick = () => toggleModal(false);
   closeDocBtn.onclick = () => toggleModal(false);
+
+  // Modal open/close controls for Lead Access
+  const toggleLeadAccessModal = (show) => {
+    if (show) {
+      leadAccessModal.classList.add("active");
+    } else {
+      leadAccessModal.classList.remove("active");
+      leadAccessForm.reset();
+    }
+  };
+
+  closeAccessBtn.onclick = () => toggleLeadAccessModal(false);
+  cancelAccessBtn.onclick = () => toggleLeadAccessModal(false);
+
+  function openLeadAccessModal(lead) {
+    accessLeadId.value = lead.id;
+    accessLeadNameLabel.textContent = `Lead: ${lead.name}`;
+    accessLeadEmailLabel.textContent = lead.email;
+    accessLeadStatus.value = lead.status || "Pending";
+    
+    // Format expiry date for datetime-local (YYYY-MM-DDTHH:MM)
+    if (lead.expiry) {
+      const d = new Date(lead.expiry);
+      if (!isNaN(d.getTime())) {
+        const tzoffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(d.getTime() - tzoffset)).toISOString().slice(0, 16);
+        accessLeadExpiry.value = localISOTime;
+      } else {
+        accessLeadExpiry.value = "";
+      }
+    } else {
+      accessLeadExpiry.value = "";
+    }
+
+    // Determine unlocked state
+    const unlockedDocsStr = (lead.unlockedDocs || "").toString().trim();
+    const unlockedDocs = unlockedDocsStr.split(",").map(s => s.trim());
+    const isAllUnlocked = !unlockedDocsStr || unlockedDocsStr === "*" || unlockedDocsStr.toLowerCase() === "all";
+
+    accessUnlockAll.checked = isAllUnlocked;
+
+    // Render active documents checklist
+    accessDocsContainer.innerHTML = "";
+    const activeDocs = docsData.filter(d => d.status === "Active");
+
+    if (activeDocs.length === 0) {
+      accessDocsContainer.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1rem 0;">No active documents in system.</span>`;
+    } else {
+      activeDocs.forEach(doc => {
+        const item = document.createElement("div");
+        item.style.display = "flex";
+        item.style.alignItems = "center";
+        item.style.gap = "0.5rem";
+        
+        const isChecked = isAllUnlocked || unlockedDocs.includes(doc.id);
+        const disabledAttr = isAllUnlocked ? "disabled" : "";
+
+        item.innerHTML = `
+          <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; width: 100%;">
+            <input type="checkbox" class="access-doc-checkbox" data-id="${doc.id}" style="width: 15px; height: 15px; accent-color: var(--accent);" ${isChecked ? 'checked' : ''} ${disabledAttr}>
+            <span style="font-weight: 500; color: var(--text-primary);">${doc.title}</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted); background: var(--bg-primary); border: 1px solid var(--border-color); padding: 0.1rem 0.4rem; border-radius: var(--radius-sm); margin-left: auto;">${doc.fileType}</span>
+          </label>
+        `;
+        accessDocsContainer.appendChild(item);
+      });
+    }
+
+    // Toggle checkboxes based on Unlock All
+    const updateCheckboxesState = () => {
+      const checkboxes = accessDocsContainer.querySelectorAll(".access-doc-checkbox");
+      checkboxes.forEach(cb => {
+        if (accessUnlockAll.checked) {
+          cb.checked = true;
+          cb.disabled = true;
+        } else {
+          cb.disabled = false;
+          // Restore original checks
+          cb.checked = unlockedDocs.includes(cb.getAttribute("data-id"));
+        }
+      });
+    };
+
+    accessUnlockAll.onchange = updateCheckboxesState;
+    
+    toggleLeadAccessModal(true);
+  }
+
+  // Handle access settings submit
+  leadAccessForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const leadId = accessLeadId.value;
+    const statusVal = accessLeadStatus.value;
+    const expiryVal = accessLeadExpiry.value;
+    
+    let unlockedDocsVal = "";
+    if (accessUnlockAll.checked) {
+      unlockedDocsVal = "*";
+    } else {
+      const checkedBoxes = accessDocsContainer.querySelectorAll(".access-doc-checkbox:checked");
+      unlockedDocsVal = Array.from(checkedBoxes).map(cb => cb.getAttribute("data-id")).join(",");
+    }
+
+    // Format expiry back to ISO or empty
+    const expiryISO = expiryVal ? new Date(expiryVal).toISOString() : "";
+
+    try {
+      showToast("Updating access privileges...", "info");
+      const response = await apiRequest("update-lead-access", {
+        passcode: adminPasscode,
+        leadId: leadId,
+        status: statusVal,
+        expiry: expiryISO,
+        unlockedDocs: unlockedDocsVal
+      });
+
+      if (response && response.success) {
+        showToast("Lead access updated successfully.", "success");
+        toggleLeadAccessModal(false);
+        await refreshData();
+      } else {
+        showToast(response.error || "Failed to update access privileges.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating access settings.", "error");
+    }
+  });
 
   // Helper to extract Google Drive File ID from standard sharing or direct links
   function extractGoogleDriveId(url) {

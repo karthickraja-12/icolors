@@ -64,6 +64,9 @@ function doPost(e) {
     else if (action === "activate-lead") {
       return handleActivateLead(requestData);
     }
+    else if (action === "update-lead-access") {
+      return handleUpdateLeadAccess(requestData);
+    }
     else if (action === "update-document") {
       return handleUpdateDocument(requestData);
     }
@@ -103,10 +106,17 @@ function setupDatabase() {
   if (!leadsSheet) {
     leadsSheet = ss.insertSheet("Leads");
     leadsSheet.appendRow([
-      "Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Access Token", "IP Address", "Device Type", "Status", "Expiry Date"
+      "Lead ID", "Timestamp", "Name", "Email", "Phone", "Company", "Access Token", "IP Address", "Device Type", "Status", "Expiry Date", "Unlocked Documents"
     ]);
     // Format headers
-    leadsSheet.getRange("A1:K1").setFontWeight("bold").setBackground("#f1f5f9");
+    leadsSheet.getRange("A1:L1").setFontWeight("bold").setBackground("#f1f5f9");
+  } else {
+    // Auto-migrate: check if "Unlocked Documents" column exists, if not add it
+    var lastCol = leadsSheet.getLastColumn();
+    var headers = leadsSheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    if (headers.indexOf("Unlocked Documents") === -1) {
+      leadsSheet.getRange(1, lastCol + 1).setValue("Unlocked Documents").setFontWeight("bold").setBackground("#f1f5f9");
+    }
   }
   
   // 2. Access Logs Sheet
@@ -221,7 +231,8 @@ function handleValidateToken(token, fingerprint) {
         return makeResponse({
           success: true,
           name: data[i][2], // Name
-          leadId: data[i][0] // Lead ID
+          leadId: data[i][0], // Lead ID
+          unlockedDocs: data[i].length > 11 ? (data[i][11] || "") : "" // Unlocked Documents
         });
       } else if (status === "Pending") {
         return makeResponse({
@@ -247,6 +258,10 @@ function handleGetDocuments(token, fingerprint) {
     return makeResponse({ success: false, error: validationData.error || "Unauthorized access token." });
   }
   
+  var unlockedDocsStr = (validationData.unlockedDocs || "").toString().trim();
+  var unlockedDocs = unlockedDocsStr.split(",").map(function(s) { return s.trim(); });
+  var allUnlocked = !unlockedDocsStr || unlockedDocsStr === "*" || unlockedDocsStr.toLowerCase() === "all";
+  
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Documents");
   if (!sheet) return makeResponse({ success: true, documents: [] });
@@ -257,13 +272,17 @@ function handleGetDocuments(token, fingerprint) {
   for (var i = 1; i < data.length; i++) {
     // Only return Active documents
     if (data[i][6] === "Active") {
+      var docId = data[i][0];
+      var isUnlocked = allUnlocked || (unlockedDocs.indexOf(docId) !== -1);
+      
       documents.push({
-        id: data[i][0],
+        id: docId,
         title: data[i][1],
         description: data[i][2],
         fileType: data[i][4],
         addedDate: data[i][5] ? new Date(data[i][5]).toISOString().split('T')[0] : "",
-        status: data[i][6]
+        status: data[i][6],
+        unlocked: isUnlocked
       });
     }
   }
@@ -566,6 +585,14 @@ function handleActivateLead(data) {
       sheet.getRange(row, 10).setValue("Active"); // Column J (Index 9) is Status
       sheet.getRange(row, 11).setValue(expiryDate.toISOString()); // Column K (Index 10) is Expiry Date
       
+      var lastCol = sheet.getLastColumn();
+      if (lastCol < 12) {
+        sheet.getRange(1, 12).setValue("Unlocked Documents").setFontWeight("bold").setBackground("#f1f5f9");
+      }
+      if (data.unlockedDocs !== undefined) {
+        sheet.getRange(row, 12).setValue(data.unlockedDocs);
+      }
+      
       // Trigger the automated email with the token link now!
       sendBrandedEmail(values[i][2], values[i][3], values[i][6]);
       
@@ -698,6 +725,17 @@ function handleRequestDownloadToken(data) {
   for (var i = 1; i < leadsData.length; i++) {
     if (leadsData[i][6] === token && leadsData[i][9] === "Active") {
       leadFound = true;
+      
+      // Check if document is unlocked for this lead
+      var unlockedDocsStr = leadsData[i].length > 11 ? (leadsData[i][11] || "") : "";
+      unlockedDocsStr = unlockedDocsStr.toString().trim();
+      var unlockedDocs = unlockedDocsStr.split(",").map(function(s) { return s.trim(); });
+      var allUnlocked = !unlockedDocsStr || unlockedDocsStr === "*" || unlockedDocsStr.toLowerCase() === "all";
+      
+      if (!allUnlocked && unlockedDocs.indexOf(docId) === -1) {
+        return makeResponse({ success: false, error: "Access Denied: You have not purchased/unlocked this document." });
+      }
+      
       var existingFingerprintsStr = leadsData[i][7] || "";
       var fingerprints = existingFingerprintsStr ? existingFingerprintsStr.split(",") : [];
       
@@ -787,4 +825,45 @@ function handleRetrieveFile(data) {
  */
 function authorizeDrive() {
   DriveApp.getRootFolder();
+}
+
+/**
+ * Admin Panel: Update lead access settings (Status, Expiry, Unlocked Documents)
+ */
+function handleUpdateLeadAccess(data) {
+  if (data.passcode !== ADMIN_PASSCODE) {
+    return makeResponse({ success: false, error: "Unauthorized admin access." });
+  }
+  
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Leads");
+  if (!sheet) return makeResponse({ success: false, error: "Leads database missing." });
+  
+  var range = sheet.getDataRange();
+  var values = range.getValues();
+  
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][0] === data.leadId) {
+      var row = i + 1;
+      
+      var lastCol = sheet.getLastColumn();
+      if (lastCol < 12) {
+        sheet.getRange(1, 12).setValue("Unlocked Documents").setFontWeight("bold").setBackground("#f1f5f9");
+      }
+      
+      if (data.status) {
+        sheet.getRange(row, 10).setValue(data.status);
+      }
+      if (data.expiry !== undefined) {
+        sheet.getRange(row, 11).setValue(data.expiry);
+      }
+      if (data.unlockedDocs !== undefined) {
+        sheet.getRange(row, 12).setValue(data.unlockedDocs);
+      }
+      
+      return makeResponse({ success: true });
+    }
+  }
+  
+  return makeResponse({ success: false, error: "Lead ID not found: " + data.leadId });
 }

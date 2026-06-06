@@ -24,7 +24,8 @@ const MOCK_DB = {
           ip: "192.168.1.15",
           device: "Desktop",
           status: "Active",
-          expiry: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString()
+          expiry: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString(),
+          unlockedDocs: "*"
         },
         {
           id: "L-102",
@@ -37,7 +38,8 @@ const MOCK_DB = {
           ip: "116.12.83.4",
           device: "Mobile",
           status: "Active",
-          expiry: new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString()
+          expiry: new Date(Date.now() + (14 * 24 * 60 * 60 * 1000)).toISOString(),
+          unlockedDocs: "*"
         },
         {
           id: "L-103",
@@ -50,7 +52,8 @@ const MOCK_DB = {
           ip: "82.234.12.189",
           device: "Tablet",
           status: "Pending",
-          expiry: ""
+          expiry: "",
+          unlockedDocs: ""
         }
       ];
       localStorage.setItem("icolors_leads", JSON.stringify(defaultLeads));
@@ -244,7 +247,8 @@ function handleMockRequest(action, data) {
             ip: data.fingerprint || "",
             device: getDeviceType(),
             status: "Pending",
-            expiry: ""
+            expiry: "",
+            unlockedDocs: ""
           };
 
           leads.push(newLead);
@@ -283,12 +287,12 @@ function handleMockRequest(action, data) {
                   return resolve({ success: false, error: "Security Limit Exceeded: This access link has been used on too many different devices." });
                 }
               }
-              resolve({ success: true, name: leadRecord.name, leadId: leadRecord.id });
+              resolve({ success: true, name: leadRecord.name, leadId: leadRecord.id, unlockedDocs: leadRecord.unlockedDocs || "" });
             } else if (leadRecord.status === "Pending") {
-              resolve({ 
-                success: false, 
-                isPending: true, 
-                error: "Pending Payment Activation. Please pay the representative on-spot to unlock access." 
+              resolve({
+                success: false,
+                isPending: true,
+                error: "Pending Payment Activation. Please pay the representative on-spot to unlock access."
               });
             } else {
               resolve({ success: false, error: "Access token is invalid or inactive." });
@@ -303,6 +307,16 @@ function handleMockRequest(action, data) {
           if (!dlLead) {
             return resolve({ success: false, error: "Unauthorized access token." });
           }
+
+          // Verify item-level access security
+          const dlUnlockedDocsStr = (dlLead.unlockedDocs || "").toString().trim();
+          const dlUnlockedDocs = dlUnlockedDocsStr.split(",").map(s => s.trim());
+          const dlAllUnlocked = !dlUnlockedDocsStr || dlUnlockedDocsStr === "*" || dlUnlockedDocsStr.toLowerCase() === "all";
+
+          if (!dlAllUnlocked && !dlUnlockedDocs.includes(data.docId)) {
+            return resolve({ success: false, error: "Access Denied: You have not unlocked/purchased this document." });
+          }
+
           // Validate fingerprint belongs to lead
           let dlFps = dlLead.ip ? dlLead.ip.split(",") : [];
           if (data.fingerprint && !dlFps.includes(data.fingerprint)) {
@@ -324,7 +338,7 @@ function handleMockRequest(action, data) {
           }
           // Immediately delete (single-use)
           localStorage.removeItem("mock_dl_" + data.dlToken);
-          
+
           const ticket = JSON.parse(ticketDataStr);
           if (Date.now() - ticket.timestamp > 60000) {
             return resolve({ success: false, error: "Download ticket has expired (valid for 60s)." });
@@ -344,7 +358,7 @@ function handleMockRequest(action, data) {
 
           const sampleText = `This is a secure, authenticated download for: ${targetDoc.title}.\nRetrieved via direct download proxy from iColors.`;
           const base64Content = btoa(unescape(encodeURIComponent(sampleText)));
-          
+
           resolve({
             success: true,
             data: `data:${mime};base64,${base64Content}`,
@@ -358,7 +372,17 @@ function handleMockRequest(action, data) {
             resolve({ success: false, error: "Unauthorized." });
           } else {
             const activeDocs = docs.filter(d => d.status === "Active");
-            resolve({ success: true, documents: activeDocs });
+
+            const unlockedDocsStr = (validLead.unlockedDocs || "").toString().trim();
+            const unlockedDocs = unlockedDocsStr.split(",").map(s => s.trim());
+            const allUnlocked = !unlockedDocsStr || unlockedDocsStr === "*" || unlockedDocsStr.toLowerCase() === "all";
+
+            const docsWithAccess = activeDocs.map(d => ({
+              ...d,
+              unlocked: allUnlocked || unlockedDocs.includes(d.id)
+            }));
+
+            resolve({ success: true, documents: docsWithAccess });
           }
           break;
 
@@ -454,6 +478,32 @@ function handleMockRequest(action, data) {
               const expiryDate = new Date(Date.now() + (15 * 24 * 60 * 60 * 1000));
               leads[leadIdx].status = "Active";
               leads[leadIdx].expiry = expiryDate.toISOString();
+              if (data.unlockedDocs !== undefined) {
+                leads[leadIdx].unlockedDocs = data.unlockedDocs;
+              }
+              localStorage.setItem("icolors_leads", JSON.stringify(leads));
+              resolve({ success: true });
+            } else {
+              resolve({ success: false, error: "Lead not found." });
+            }
+          }
+          break;
+
+        case "update-lead-access":
+          if (data.passcode !== CONFIG.DEFAULT_ADMIN_PASSCODE) {
+            resolve({ success: false, error: "Unauthorized." });
+          } else {
+            const leadIdx = leads.findIndex(l => l.id === data.leadId);
+            if (leadIdx > -1) {
+              if (data.status) {
+                leads[leadIdx].status = data.status;
+              }
+              if (data.expiry !== undefined) {
+                leads[leadIdx].expiry = data.expiry;
+              }
+              if (data.unlockedDocs !== undefined) {
+                leads[leadIdx].unlockedDocs = data.unlockedDocs;
+              }
               localStorage.setItem("icolors_leads", JSON.stringify(leads));
               resolve({ success: true });
             } else {
@@ -566,10 +616,10 @@ function generateDeviceFingerprint() {
   const screenWidth = window.screen.width;
   const screenHeight = window.screen.height;
   const language = navigator.language || "en";
-  
+
   // Create a combined string of browser attributes
   const rawString = `${ua}|${screenWidth}x${screenHeight}|${language}`;
-  
+
   let hash = 0;
   for (let i = 0; i < rawString.length; i++) {
     const char = rawString.charCodeAt(i);

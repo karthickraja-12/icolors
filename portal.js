@@ -160,14 +160,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Render Cards
     filteredDocs.forEach(doc => {
       const card = document.createElement("div");
-      card.className = "doc-card";
+      card.className = `doc-card ${doc.unlocked === false ? 'doc-card-locked' : ''}`;
       
       // Get Icon and color theme based on file type
       const iconDetails = getFileTypeDetails(doc.fileType);
       
+      let actionsHtml = "";
+      let lockedOverlayHtml = "";
+      
+      if (doc.unlocked === false) {
+        lockedOverlayHtml = `
+          <div class="locked-badge">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 14px; height: 14px;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+            Locked
+          </div>
+        `;
+        actionsHtml = `
+          <button class="btn btn-secondary locked-btn" style="width: 100%; cursor: not-allowed; opacity: 0.65; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" disabled>
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 16px; height: 16px;"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+            Purchase to Unlock
+          </button>
+        `;
+      } else {
+        actionsHtml = `
+          <button class="btn btn-secondary view-btn" data-id="${doc.id}">View</button>
+          <button class="btn btn-primary download-btn" data-id="${doc.id}">Download</button>
+        `;
+      }
+      
       card.innerHTML = `
         <div class="doc-thumbnail" style="background: ${iconDetails.bgGradient}">
           <div class="doc-badge">${doc.fileType}</div>
+          ${lockedOverlayHtml}
           <div class="doc-icon-overlay" style="background: ${iconDetails.iconBg}">
             ${iconDetails.svg}
           </div>
@@ -178,19 +202,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             <p class="doc-desc">${doc.description}</p>
           </div>
           <div class="doc-actions">
-            <button class="btn btn-secondary view-btn" data-id="${doc.id}">View</button>
-            <button class="btn btn-primary download-btn" data-id="${doc.id}">Download</button>
+            ${actionsHtml}
           </div>
         </div>
       `;
       
-      // Attach click listeners to actions to track event before forwarding link
-      card.querySelector(".view-btn").addEventListener("click", () => {
-        handleDocumentAction(doc, "Viewed File");
-      });
-      card.querySelector(".download-btn").addEventListener("click", () => {
-        handleDocumentAction(doc, "Downloaded File");
-      });
+      // Attach click listeners to active buttons
+      if (doc.unlocked !== false) {
+        card.querySelector(".view-btn").addEventListener("click", () => {
+          handleDocumentAction(doc, "Viewed File");
+        });
+        card.querySelector(".download-btn").addEventListener("click", () => {
+          handleDocumentAction(doc, "Downloaded File");
+        });
+      }
 
       documentGrid.appendChild(card);
     });

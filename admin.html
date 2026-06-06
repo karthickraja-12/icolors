@@ -370,6 +370,56 @@
     </div>
   </div>
 
+  <!-- MODAL: MANAGE LEAD ACCESS -->
+  <div class="modal-overlay" id="lead-access-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Manage Lead Access</h3>
+        <button class="modal-close" id="lead-access-modal-close">&times;</button>
+      </div>
+      <form id="lead-access-form">
+        <input type="hidden" id="access-lead-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 600; color: var(--text-primary); font-size: 1.1rem; margin-bottom: 0.25rem;" id="access-lead-name-label">Lead: Name</label>
+            <span id="access-lead-email-label" style="font-size: 0.85rem; color: var(--text-muted);">email@example.com</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div class="form-group">
+              <label for="access-lead-status" class="form-label">Status *</label>
+              <select id="access-lead-status" class="form-input" required>
+                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="access-lead-expiry" class="form-label">Expiry Date</label>
+              <input type="datetime-local" id="access-lead-expiry" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem; margin-bottom: 0.5rem;">
+            <label class="form-label">Unlocked Resources</label>
+            <div style="margin-bottom: 0.75rem;">
+              <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <input type="checkbox" id="access-unlock-all" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                <span style="font-weight: 600; color: var(--accent-light);">Unlock All Documents (Default)</span>
+              </label>
+            </div>
+            <div id="access-documents-list-container" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.75rem; background: var(--bg-tertiary); display: flex; flex-direction: column; gap: 0.6rem;">
+              <!-- Dynamic checkboxes -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="lead-access-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Access Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="app.js"></script>
   <script src="admin.js"></script>
