@@ -305,6 +305,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         iconBg = "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)";
         bgGradient = "radial-gradient(circle, rgba(99,102,241,0.1) 0%, rgba(99,102,241,0.02) 100%)";
         break;
+      case "PSD":
+        // Photoshop Cyan/Blue Theme
+        svg = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>`;
+        iconBg = "linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)";
+        bgGradient = "radial-gradient(circle, rgba(0,198,255,0.1) 0%, rgba(0,198,255,0.02) 100%)";
+        break;
       default:
         // Grey Theme
         svg = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`;

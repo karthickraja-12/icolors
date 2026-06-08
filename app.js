@@ -355,6 +355,7 @@ function handleMockRequest(action, data) {
           if (targetDoc.fileType === "PDF") { extension = "pdf"; mime = "application/pdf"; }
           else if (targetDoc.fileType === "Spreadsheet") { extension = "xlsx"; mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; }
           else if (targetDoc.fileType === "Presentation") { extension = "pptx"; mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"; }
+          else if (targetDoc.fileType === "PSD") { extension = "psd"; mime = "image/vnd.adobe.photoshop"; }
 
           const sampleText = `This is a secure, authenticated download for: ${targetDoc.title}.\nRetrieved via direct download proxy from iColors.`;
           const base64Content = btoa(unescape(encodeURIComponent(sampleText)));
